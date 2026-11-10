@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Airlock Browser: an arched door, closed down the middle. -->
+  <rect x="32" y="32" width="448" height="448" rx="104" fill="#1f86d6"/>
+  <path d="M144 400V240a112 112 0 0 1 224 0v160Z" fill="#ffffff"/>
+  <rect x="246" y="168" width="20" height="232" fill="#1f86d6"/>
+</svg>

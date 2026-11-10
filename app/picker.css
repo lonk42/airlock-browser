@@ -1,0 +1,78 @@
+/* The screen-share picker, in the bar's look (bar.css). */
+:root {
+  color-scheme: dark;
+  --surface: #202326;
+  --raised: #33373c;
+  --line: #3a3f45;
+  --text: #d7dade;
+  --strong: #ffffff;
+  --muted: #8b939c;
+  --accent: #1f86d6;
+  font: 14px/1.45 "Segoe UI", "Noto Sans", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; color: var(--text); }
+
+.backdrop {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .6);
+  padding: 24px;
+}
+
+.dialog {
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, .6);
+  padding: 22px 24px;
+  width: min(820px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+h1 { font-size: 18px; font-weight: 600; color: var(--strong); margin: 0 0 2px; display: flex; align-items: center; gap: 10px; }
+h1 .mark { width: 22px; height: 22px; fill: var(--accent); flex: none; }
+.muted { color: var(--muted); margin: 0 0 16px; overflow-wrap: anywhere; }
+
+#sources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+#sources button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+}
+#sources button:hover { background: var(--raised); color: var(--strong); box-shadow: inset 0 -2px 0 var(--accent); }
+#sources button:focus-visible, footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#sources img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #000; border-radius: 6px; }
+#sources span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+footer { display: flex; justify-content: flex-end; margin-top: 18px; }
+footer button {
+  font: inherit;
+  color: var(--text);
+  background: var(--raised);
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+footer button:hover { background: #3f444a; color: var(--strong); }

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'">
+<title>Airlock Browser bar</title>
+<link rel="stylesheet" href="bar.css">
+</head>
+<body>
+<!-- Icons: Material Icons by Google, Apache License 2.0. -->
+<div id="root" class="closed">
+  <button id="handle" type="button" aria-label="Show the Airlock Browser bar" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></button>
+  <div id="panel" role="toolbar" aria-label="Airlock Browser" hidden>
+    <span id="brand"><svg class="icon mark" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5 20.5v-10a7 7 0 0 1 14 0v10zM11.3 6v14.5h1.4V6z"/></svg><span id="brand-name"></span></span>
+    <span id="who"><svg class="icon mark" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5 20.5v-10a7 7 0 0 1 14 0v10zM11.3 6v14.5h1.4V6z"/></svg><span id="title"></span></span>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" data-act="home" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span class="label"></span></button>
+    <button type="button" data-act="windows" aria-haspopup="menu" aria-expanded="false" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h10v4h8v10z"/></svg><span class="label">Windows</span></button>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" data-act="back" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span class="label">Back</span></button>
+    <button type="button" data-act="reload" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg><span class="label">Reload</span></button>
+    <button type="button" data-act="fullscreen" hidden><svg class="icon enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg><svg class="icon leave" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg><span class="label"></span></button>
+    <button type="button" data-act="settings" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span class="label">Settings</span></button>
+    <span id="security" class="status" hidden></span>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" data-act="maximize" hidden><svg class="icon enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H6V6h12v12z"/></svg><svg class="icon leave" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5H1v16c0 1.1.9 2 2 2h16v-2H3V5zm18-4H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 16H7V3h14v14z"/></svg><span class="label">Maximise</span></button>
+    <button type="button" data-act="close" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg><span class="label">Close</span></button>
+    <button type="button" data-act="quit" class="quit" hidden><svg class="icon quit-power" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg><svg class="icon quit-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg><span class="label">Quit</span></button>
+    <button type="button" data-act="pin" class="pin" aria-pressed="false" title="Keep the bar open"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg><span class="label">Pin</span></button>
+  </div>
+  <ul id="menu" role="menu" hidden></ul>
+</div>
+<script src="bar-ui.js"></script>
+</body>
+</html>

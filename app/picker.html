@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:">
+<title>Share your screen</title>
+<link rel="stylesheet" href="picker.css">
+</head>
+<body>
+<div class="backdrop">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="heading">
+    <h1 id="heading"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5 20.5v-10a7 7 0 0 1 14 0v10zM11.3 6v14.5h1.4V6z"/></svg>Share your screen</h1>
+    <p id="origin" class="muted"></p>
+    <ul id="sources"></ul>
+    <footer><button type="button" id="cancel">Cancel</button></footer>
+  </div>
+</div>
+<script src="picker-ui.js"></script>
+</body>
+</html>

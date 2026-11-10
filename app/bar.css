@@ -1,0 +1,178 @@
+/* The bar in two forms, one look: charcoal surfaces, a blue mark and active
+   underline, a green or amber security chip.
+   - Drop-down (full-screen windows): collapsed to a pull tab at the top centre;
+     open, a floating card with the window's name and labelled buttons.
+   - Toolbar (kiosk windows that are not full screen, #root.toolbar): a 38px
+     strip with the brand, page buttons, the page title centred, the chip and
+     the window buttons. Its height must match TOOLBAR_HEIGHT in main.js.
+   Icons are Material Icons (bar.html). */
+:root {
+  color-scheme: dark;
+  --surface: #202326;
+  --raised: #33373c;
+  --line: #3a3f45;
+  --text: #d7dade;
+  --strong: #ffffff;
+  --muted: #8b939c;
+  --accent: #1f86d6;
+  --ok: #a9d8a9;
+  --ok-dot: #58c458;
+  --warn: #f0c27a;
+  --warn-dot: #e5a03a;
+  --bad: #e81123;
+  font: 13px/1.3 "Segoe UI", "Noto Sans", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: transparent;
+  color: var(--text);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* The view is sized to #root, so its box is all the desktop loses. */
+#root { display: inline-flex; flex-direction: column; align-items: center; }
+#root.open:not(.toolbar) { padding: 0 14px 14px; } /* room for the card's shadow */
+
+.icon { width: 18px; height: 18px; flex: none; fill: currentColor; }
+[data-state=enter] .icon.leave, [data-state=leave] .icon.enter { display: none; }
+
+/* Collapsed: a pull tab with a chevron. */
+#handle {
+  width: 72px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 0 9px 9px;
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+#handle .icon { width: 14px; height: 14px; }
+#handle:hover, #handle:focus-visible { background: var(--raised); outline: none; }
+#root.open #handle { display: none; }
+
+/* Open: a floating card. */
+#panel {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 5px 5px 5px 12px;
+  background: var(--surface);
+  border-radius: 11px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+  white-space: nowrap;
+}
+#panel[hidden] { display: none; }
+
+#who { display: flex; align-items: center; gap: 7px; font-weight: 600; color: var(--strong); margin-right: 4px; }
+#who .mark, #brand .mark { fill: var(--accent); }
+#title { max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+#brand { display: none; }
+#security { display: none; }
+
+.sep { width: 1px; height: 20px; margin: 0 5px; background: var(--line); flex: none; }
+.sep[hidden] { display: none; }
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+button[hidden] { display: none; }
+button:hover { background: var(--raised); color: var(--strong); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+button:disabled { opacity: .35; cursor: default; }
+button:disabled:hover { background: transparent; color: var(--text); }
+button[aria-expanded=true], button[aria-pressed=true] { background: var(--raised); box-shadow: inset 0 -2px 0 var(--accent); color: var(--strong); }
+button.quit:hover { background: var(--bad); color: #fff; }
+.quit-x { display: none; }
+.pin { padding: 7px 8px; }
+.pin .label { display: none; }
+
+/* The Windows list. */
+#menu {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px;
+  min-width: 260px;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+}
+#menu[hidden] { display: none; }
+#menu button { width: 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; max-width: 420px; display: block; }
+#menu button[aria-current=true] { color: var(--strong); box-shadow: inset 2px 0 0 var(--accent); }
+
+/* --- Kiosk toolbar ------------------------------------------------------------ */
+#root.toolbar { display: flex; width: 100vw; align-items: stretch; }
+#root.toolbar #handle, #root.toolbar .pin, #root.toolbar .label, #root.toolbar .sep, #root.toolbar #who .mark { display: none; }
+#root.toolbar #panel {
+  height: 38px;
+  margin: 0;
+  padding: 0 8px 0 14px;
+  border-radius: 0;
+  border-bottom: 1px solid #000;
+  box-shadow: none;
+  -webkit-app-region: drag;
+}
+#root.toolbar button { -webkit-app-region: no-drag; width: 36px; height: 30px; padding: 0; justify-content: center; border-radius: 6px; }
+#root.toolbar button[aria-expanded=true] { box-shadow: inset 0 -2px 0 var(--accent); }
+
+#root.toolbar #brand { display: flex; align-items: center; gap: 9px; order: 0; margin-right: 14px; font-weight: 600; color: var(--strong); }
+#root.toolbar #brand .mark { width: 20px; height: 20px; }
+#root.toolbar [data-act=back] { order: 1; }
+#root.toolbar [data-act=reload] { order: 2; }
+#root.toolbar [data-act=home] { order: 3; }
+#root.toolbar #who { order: 4; flex: 1; justify-content: center; min-width: 0; margin: 0 12px; font-weight: 400; color: var(--muted); }
+#root.toolbar #title { max-width: none; }
+#root.toolbar #security { order: 5; }
+#root.toolbar [data-act=windows] { order: 6; }
+#root.toolbar [data-act=settings] { order: 7; }
+#root.toolbar [data-act=fullscreen] { order: 8; }
+#root.toolbar [data-act=maximize] { order: 9; }
+#root.toolbar [data-act=close] { order: 10; }
+#root.toolbar [data-act=quit] { order: 11; }
+
+/* The security chip. */
+#root.toolbar #security:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 8px;
+  padding: 3px 10px;
+  border-radius: 11px;
+  font-size: 12px;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+  cursor: default;
+}
+#security::before { content: ""; width: 7px; height: 7px; border-radius: 50%; }
+#security[data-level=ok] { color: var(--ok); background: rgba(88, 196, 88, .1); }
+#security[data-level=ok]::before { background: var(--ok-dot); }
+#security[data-level=warn] { color: var(--warn); background: rgba(229, 160, 58, .12); }
+#security[data-level=warn]::before { background: var(--warn-dot); }
+
+/* Close and quit are round × buttons; quit is a power button when a Close is there too. */
+#root.toolbar [data-act=close], #root.toolbar [data-act=quit] { width: 26px; height: 26px; margin: 0 5px; border-radius: 50%; background: var(--line); }
+#root.toolbar [data-act=close] .icon, #root.toolbar [data-act=quit] .icon { width: 15px; height: 15px; }
+#root.toolbar [data-act=close]:hover, #root.toolbar [data-act=quit]:hover { background: var(--bad); color: #fff; }
+#root.toolbar #panel:not(.has-close) .quit-power { display: none; }
+#root.toolbar #panel:not(.has-close) .quit-x { display: block; }
+
+#root.toolbar #menu { align-self: flex-end; margin: 4px 8px 12px 0; }
+#root.toolbar #menu button { width: 100%; height: auto; padding: 7px 11px; border-radius: 7px; display: block; -webkit-app-region: no-drag; }
