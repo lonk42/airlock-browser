@@ -18,11 +18,11 @@ test('first run uses defaults', () => {
 
 test('save round-trips and ends first run', () => {
   const env = scratch();
-  config.save({ url: 'https://example.lan:3001', display: 'DP-2', windowMode: 'fullscreen', captureKeys: false }, env);
+  config.save({ url: 'https://example.lan:3001', display: 'DP-2', secondDisplay: 'DP-3', windowMode: 'fullscreen', captureKeys: false }, env);
   const { settings, firstRun } = config.load(env);
   assert.equal(firstRun, false);
   assert.deepEqual(settings, {
-    url: 'https://example.lan:3001', display: 'DP-2', windowMode: 'fullscreen', captureKeys: false, i3Mode: 'airlock-browser',
+    url: 'https://example.lan:3001', display: 'DP-2', secondDisplay: 'DP-3', windowMode: 'fullscreen', captureKeys: false, i3Mode: 'airlock-browser',
   });
 });
 

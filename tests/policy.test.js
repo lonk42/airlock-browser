@@ -61,6 +61,7 @@ title: Coder
 settings:
   url: https://coder.example.lan
   display: DP-2
+  secondDisplay: none
   windowMode: fullscreen
   captureKeys: false
 lock: all
@@ -68,11 +69,13 @@ integration: report
 `);
   assert.equal(p.profile, 'coder');
   assert.equal(p.title, 'Coder');
-  assert.deepEqual(p.settings, { url: 'https://coder.example.lan', display: 'DP-2', windowMode: 'fullscreen', captureKeys: false });
+  assert.deepEqual(p.settings, { url: 'https://coder.example.lan', display: 'DP-2', secondDisplay: 'none', windowMode: 'fullscreen', captureKeys: false });
   assert.deepEqual(p.lock, policy.SETTING_KEYS);
 });
 
 test('mistakes are errors, not ignored', () => {
+  fails('version: 1\nsettings:\n  secondDisplay: ""\n', /settings.secondDisplay: must be a non-empty string/);
+  fails('version: 1\nsettings:\n  secondDisplay: DP 2\n', /settings.secondDisplay: must be auto, none or an output name/);
   fails('kiosk: true', /version: must be 1/);
   fails('version: 2', /version: must be 1/);
   fails('version: 1\nkoisk: true', /koisk: unknown key/);

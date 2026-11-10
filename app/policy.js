@@ -160,6 +160,10 @@ function parse(text, file = null, base = file ? path.dirname(file) : process.cwd
       if (typeof s.display !== 'string') fail(['settings', 'display'], 'must be an output name such as DP-2, or "".');
       p.settings.display = s.display;
     }
+    if (s.secondDisplay !== undefined) {
+      p.settings.secondDisplay = str(s.secondDisplay, ['settings', 'secondDisplay'], /^\S+$/,
+        'must be auto, none or an output name such as DP-2.');
+    }
     if (s.windowMode !== undefined) p.settings.windowMode = oneOf(s.windowMode, ['settings', 'windowMode'], config.WINDOW_MODES);
     if (s.captureKeys !== undefined) p.settings.captureKeys = bool(s.captureKeys, ['settings', 'captureKeys']);
   }

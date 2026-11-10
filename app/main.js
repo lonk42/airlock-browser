@@ -18,9 +18,11 @@ const storage = require('./storage');
 const origins = require('./origins');
 const tls = require('./tls');
 const downloads = require('./downloads');
+const screens = require('./screens');
 
 const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 30000;
+const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 // The app's mark on its own pages: the arched door from icon.svg, drawn even-odd so the seam is a gap.
 const MARK_PATH = 'M5 20.5v-10a7 7 0 0 1 14 0v10zM11.3 6v14.5h1.4V6z';
 const TOOLBAR_HEIGHT = 38; // Must match #root.toolbar #panel in bar.css.
@@ -149,6 +151,11 @@ async function listDisplays() {
         .map((o) => ({ name: o.name, bounds: { x: o.rect.x, y: o.rect.y, width: o.rect.width, height: o.rect.height } }));
     } catch { return []; }
   }
+  // Under X11 Electron gives no output names, so they come from xrandr.
+  if (!wayland()) {
+    const monitors = screens.parseMonitors((await ctx.run('xrandr', ['--listmonitors'])).stdout || '');
+    if (monitors.length) return monitors;
+  }
   // On Wayland the label is the output name KDE shows, e.g. DP-2.
   return screen.getAllDisplays().map((d) => ({ name: d.label || String(d.id), bounds: d.bounds }));
 }
@@ -159,13 +166,37 @@ async function chosenDisplay() {
 
 // Monitor choice: the KWin rule under KDE, i3-msg under i3, setBounds on other
 // X11 window managers. Other Wayland compositors give apps no say.
+// A selkies second screen goes to its own monitor (rec.display) on any X11
+// window manager: the KWin rule only places a window as it opens.
+// A window manager places a new window itself once it maps it, after
+// show() returns, so each way is repeated until it holds.
 async function placeWindow(rec) {
-  const display = await chosenDisplay();
+  const display = rec.display || await chosenDisplay();
   if (!display) return;
+  const b = display.bounds;
   if (wm === 'i3') {
-    await ctx.run('i3-msg', [`[class="^${integration.WM_CLASS}$"] move container to output ${display.name}, focus`]);
-  } else if (wm !== 'kde' && !wayland()) {
-    rec.win.setBounds(display.bounds);
+    // By window id: every window has the same class.
+    const id = screens.xid(rec.win.getNativeWindowHandle());
+    const focus = rec.primary ? '' : ', focus';
+    for (let i = 0; id && i < 10 && !rec.win.isDestroyed(); i += 1) {
+      const r = await ctx.run('i3-msg', [`[id="${id}"] move container to output ${display.name}${focus}`]);
+      if (r.ok && !/"success":\s*false/.test(r.stdout)) return;
+      await sleep(200);
+    }
+  } else if (!wayland() && (wm !== 'kde' || rec.primary)) {
+    const on = () => {
+      const w = rec.win.getBounds();
+      const cx = w.x + w.width / 2;
+      const cy = w.y + w.height / 2;
+      return cx >= b.x && cx < b.x + b.width && cy >= b.y && cy < b.y + b.height;
+    };
+    for (let i = 0; i < 10 && !rec.win.isDestroyed(); i += 1) {
+      await sleep(200);
+      if (rec.win.isDestroyed()) return;
+      rec.win.setBounds(b);
+      await sleep(200);
+      if (!rec.win.isDestroyed() && on()) return;
+    }
   }
 }
 
@@ -236,8 +267,17 @@ function originOf(url) {
   try { return new URL(url).origin; } catch { return null; }
 }
 
+// A window's own origins: its home's, and the first desktop origin its page
+// landed on. Coder redirects a workspace app's address to another host name
+// for the same app (dropping the agent name), and the window stays that app's.
+function ownsOrigin(rec, origin) {
+  return !!origin && (origin === originOf(rec.home) || origin === rec.landed);
+}
+
+// Desktop windows other than the launcher, each counted once: a second screen
+// belongs to the window it extends.
 function desktopWindows() {
-  return [...windows].filter((r) => !r.launcher);
+  return [...windows].filter((r) => !r.launcher && !r.primary);
 }
 
 function recordOf(contents) {
@@ -246,6 +286,12 @@ function recordOf(contents) {
 }
 
 function show(rec) {
+  // A desktop's second screen comes to the front with it.
+  const second = rec.secondary;
+  if (second && !second.win.isDestroyed()) {
+    if (second.win.isMinimized()) second.win.restore();
+    second.win.showInactive();
+  }
   if (rec.win.isMinimized()) rec.win.restore();
   if (!rec.win.isVisible()) rec.win.show();
   rec.win.focus();
@@ -255,6 +301,9 @@ function load(rec, url = rec.home) {
   clearTimeout(rec.retryTimer);
   rec.url = url;
   started = true;
+  // Loading the page's own address with a fragment, such as a selkies second
+  // screen's #display2-right, only scrolls to the fragment; reload instead.
+  if (url.includes('#') && rec.page.getURL() === url) { rec.page.reload(); return; }
   rec.page.loadURL(url).catch(() => {}); // Failures are handled in did-fail-load.
 }
 
@@ -263,7 +312,13 @@ function openUrl(rec, url) {
   const rules = nav();
   if (!rules.allowed(url)) { offsite(url); return; }
   const origin = originOf(url);
-  if (origin === originOf(rec.home)) { load(rec, url); return; }
+  // Selkies' own second-screen button opens its page in a new window.
+  const side = screens.secondarySide(url);
+  if (side && ownsOrigin(rec, origin) && rules.desktop(url)) {
+    openSecondary(rec.primary || rec, side);
+    return;
+  }
+  if (ownsOrigin(rec, origin)) { load(rec, url); return; }
   if (rules.desktop(url)) { openDesktop(url); return; }
   // Any other allowed page belongs to the launcher.
   show(launcher);
@@ -272,8 +327,8 @@ function openUrl(rec, url) {
 
 function openDesktop(url) {
   const origin = originOf(url);
-  if (launcher && originOf(launcher.home) === origin) { show(launcher); return; }
-  const existing = desktopWindows().find((r) => originOf(r.home) === origin);
+  if (launcher && ownsOrigin(launcher, origin)) { show(launcher); return; }
+  const existing = desktopWindows().find((r) => ownsOrigin(r, origin));
   if (existing) { show(existing); return; }
   const rec = createWindow(url, false);
   load(rec, url);
@@ -396,21 +451,21 @@ function barState(rec) {
     toolbar: toolbarShown(rec),
     brand: policy.title,
     security: securityOf(rec),
-    title: win.getTitle(),
+    title: rec.primary ? `${win.getTitle()} · second screen` : win.getTitle(),
     // From a desktop window, the launcher; in the launcher, its own address.
     home: !rec.launcher && launcher
       ? { label: policy.title, hint: `Show ${launcher.win.getTitle()}`, leaves: true }
       : rec.launcher && !homeIsDesktop ? { label: 'Home', hint: rec.home } : null,
     // null: no Back here; false: nothing to go back to (the toolbar greys it out).
     back: rec.launcher && !homeIsDesktop ? rec.page.navigationHistory.canGoBack() : null,
-    windows: [...windows].filter((r) => r.win.isVisible() || r === launcher).map((r) => ({
-      id: r.id, title: r.win.getTitle(), url: r.url || r.home, current: r === rec,
+    windows: [...windows].filter((r) => !r.primary && (r.win.isVisible() || r === launcher)).map((r) => ({
+      id: r.id, title: r.win.getTitle(), url: r.url || r.home, current: r === rec || r === rec.primary,
     })),
     reload: policy.keys.reload,
     // A kiosk window switches between full screen and the toolbar for this run
     // only, so a locked windowMode does not stop it.
     fullscreen: rec.toolbar && policy.toolbar.fullscreen ? (win.isFullScreen() ? 'leave' : 'enter')
-      : win.isFullScreen() ? (fullscreenLocked && windowModeOf(rec.launcher) === 'fullscreen' ? null : 'leave')
+      : win.isFullScreen() ? (fullscreenLocked && windowModeOf(usesLauncherMode(rec)) === 'fullscreen' ? null : 'leave')
         : (fullscreenLocked ? null : 'enter'),
     settings: policy.settingsPage,
     // A toolbar window has no decorations, so the toolbar maximises it.
@@ -489,7 +544,7 @@ function guardNavigation(contents, rec = null) {
       details.preventDefault();
       offsite(details.url);
     } else if (rec && rules.desktop(details.url)
-      && originOf(details.url) !== originOf(rec.home)) {
+      && !ownsOrigin(rec, originOf(details.url))) {
       details.preventDefault();
       openDesktop(details.url);
     }
@@ -538,27 +593,113 @@ function guardPopup(child) {
   child.webContents.setWindowOpenHandler(({ url }) => { offsite(url); return { action: 'deny' }; });
 }
 
+// --- Second screen -----------------------------------------------------------
+// Selkies extends its desktop over a second page, the same address with
+// #display2-<side>. Once a desktop window's page turns out to be selkies, a
+// second window opens on the second monitor (settings.secondDisplay: auto
+// picks the nearest one beside the first, else above or below), X11 only.
+// The pair is one desktop: closing, showing or quitting the first acts on
+// both. Closing the second leaves it closed for this run.
+
+const SELKIES_CHECK = "typeof window.selkiesCoreInitialize === 'function'";
+
+// Polls a loaded page for selkies' globals for up to 15 s: its core loads as a
+// separate module after the page.
+// A first page that loads selkies again (a reload, a retry after a workspace
+// restart) reloads its second screen too. Selkies' second page does not
+// rejoin a restarted server by itself; it keeps showing its last frame.
+function watchForSelkies(rec) {
+  let tries = 0;
+  const check = () => {
+    if ((!rec.secondary && rec.secondClosed) || rec.page.isDestroyed()) return;
+    rec.page.executeJavaScript(SELKIES_CHECK, false).then((found) => {
+      if (!found) {
+        if ((tries += 1) < 30) rec.selkiesTimer = setTimeout(check, 500);
+        return;
+      }
+      const second = rec.secondary;
+      if (!second) autoSecondary(rec);
+      else if (rec.selkiesSeen && !second.page.isDestroyed()) load(second, second.url || second.home);
+      rec.selkiesSeen = true;
+    }).catch(() => {});
+  };
+  clearTimeout(rec.selkiesTimer);
+  check();
+}
+
+// The display a window is on, by name, from the same list the settings show.
+async function displayOf(rec) {
+  const displays = await listDisplays();
+  return { displays, primary: (await chosenDisplay()) || screens.displayAt(rec.win.getBounds(), displays) };
+}
+
+// What secondDisplay: auto would pick now for the launcher, for the settings page.
+async function secondAutoChoice() {
+  const rec = overlayHost || launcher;
+  if (wayland() || !rec || rec.win.isDestroyed()) return null;
+  const { displays, primary } = await displayOf(rec.primary || rec);
+  const pick = screens.pickSecond(displays, primary, 'auto');
+  return pick ? { name: pick.display.name, side: pick.side } : null;
+}
+
+async function autoSecondary(rec) {
+  if (wayland() || rec.secondary || rec.secondClosed || !nav().desktop(rec.page.getURL())) return;
+  const { displays, primary } = await displayOf(rec);
+  const pick = screens.pickSecond(displays, primary, settings.secondDisplay);
+  if (pick) openSecondary(rec, pick.side, pick.display);
+}
+
+// Opens a desktop's second screen, or brings it to the front. From selkies'
+// own button there is no display yet: it goes to the one auto would choose,
+// even with secondDisplay: none, since the user asked for it.
+async function openSecondary(rec, side, display = null) {
+  if (rec.secondary) { show(rec.secondary); return; }
+  if (!display && !wayland()) {
+    const { displays, primary } = await displayOf(rec);
+    const setting = settings.secondDisplay === 'none' ? 'auto' : settings.secondDisplay;
+    const pick = screens.pickSecond(displays, primary, setting);
+    if (pick) ({ display, side } = pick);
+  }
+  if (rec.secondary || rec.win.isDestroyed()) return;
+  rec.secondClosed = false;
+  // The page's own address: Coder redirects a workspace app to another host
+  // name for the same app after the window opened it.
+  const current = rec.page.getURL();
+  const base = origins.isWeb(current) && nav().desktop(current) ? current : rec.home;
+  const second = createWindow(screens.secondaryUrl(base, side), false, { primary: rec, display });
+  rec.secondary = second;
+  load(second);
+  pushBars();
+}
+
 // The launcher can have its own mode (launcher.windowMode), such as a normal
 // window for the Coder login while desktops are fullscreen.
 function windowModeOf(isLauncher) {
   return isLauncher && policy.launcher.windowMode ? policy.launcher.windowMode : settings.windowMode;
 }
 
+// A second screen has its first window's mode.
+const usesLauncherMode = (rec) => rec.launcher || !!(rec.primary && rec.primary.launcher);
+
 function applyWindowMode(rec) {
   const { win } = rec;
-  const mode = windowModeOf(rec.launcher);
+  const mode = windowModeOf(usesLauncherMode(rec));
   win.setFullScreen(mode === 'fullscreen');
   if (mode === 'maximized') win.maximize();
   else if (mode === 'normal' && win.isMaximized()) win.unmaximize();
 }
 
-function createWindow(home, isLauncher) {
+// A second screen (opts.primary) takes its first window's mode, starts on its
+// own monitor (opts.display) and is placed there again once shown.
+function createWindow(home, isLauncher, opts = {}) {
   const toolbar = toolbarFor();
-  const frame = !toolbar && windowModeOf(isLauncher) === 'normal' && wm !== 'i3';
+  const frame = !toolbar && windowModeOf(isLauncher || !!(opts.primary && opts.primary.launcher)) === 'normal' && wm !== 'i3';
+  const start = opts.display ? opts.display.bounds : null;
   const win = new BrowserWindow({
     title: policy.title,
     width: 1600,
     height: 900,
+    ...(start ? { x: start.x, y: start.y, width: Math.min(1600, start.width), height: Math.min(900, start.height) } : {}),
     // A normal window keeps its decorations except under i3, which tiles it.
     frame,
     backgroundColor: '#000000',
@@ -599,6 +740,13 @@ function createWindow(home, isLauncher) {
   const rec = {
     id: barIds, win, page, pageView, home, launcher: isLauncher, toolbar, url: null, retryDelay: RETRY_MIN_MS, retryTimer: null,
     frame, bar: null, barSize: null,
+    // A second screen's first window, and the monitor it was placed on.
+    primary: opts.primary || null, display: opts.display || null,
+    // The first window's second screen; secondClosed once the user closed it.
+    secondary: null, secondClosed: false, selkiesTimer: null,
+    landed: null, // See ownsOrigin().
+    selkiesSeen: false, // The page has loaded selkies before; see watchForSelkies().
+    httpError: false, // The page is a desktop's HTTP error, being retried.
   };
   windows.add(rec);
   if (isLauncher) launcher = rec;
@@ -625,10 +773,17 @@ function createWindow(home, isLauncher) {
     if (rec.launcher && desktopWindows().length && !quitting) {
       event.preventDefault();
       win.hide();
+      if (rec.secondary) rec.secondary.win.hide();
     }
   });
   win.on('closed', () => {
     clearTimeout(rec.retryTimer);
+    clearTimeout(rec.selkiesTimer);
+    if (rec.primary) {
+      rec.primary.secondary = null;
+      rec.primary.secondClosed = true;
+    }
+    if (rec.secondary && !rec.secondary.win.isDestroyed()) rec.secondary.win.close();
     // A WebContentsView's page outlives its window unless closed.
     if (rec.bar && !rec.bar.webContents.isDestroyed()) rec.bar.webContents.close();
     if (pageView && !page.isDestroyed()) page.close();
@@ -637,7 +792,7 @@ function createWindow(home, isLauncher) {
     windows.delete(rec);
     if (lastFocused === rec) lastFocused = null;
     if (overlayHost === rec) { overlay = null; overlayHost = null; }
-    if (rec.launcher) launcher = null;
+    if (launcher === rec) launcher = null;
     if (!windows.size) setI3Mode('default');
     else if (launcher && !desktopWindows().length && !launcher.win.isVisible()) show(launcher);
     pushBars();
@@ -675,13 +830,26 @@ function createWindow(home, isLauncher) {
     rec.retryTimer = setTimeout(() => load(rec, retry), rec.retryDelay);
     rec.retryDelay = Math.min(rec.retryDelay * 2, RETRY_MAX_MS);
   });
+  // A desktop that answers with an HTTP error, such as Coder's 404 or 502
+  // while a workspace restarts, is retried like an unreachable one, with the
+  // server's page shown meanwhile.
+  page.on('did-navigate', (event, url, code) => {
+    if (!rec.landed && !rec.launcher && nav().desktop(url)) rec.landed = originOf(url);
+    rec.httpError = code >= 400 && nav().desktop(url);
+    if (!rec.httpError) return;
+    clearTimeout(rec.retryTimer);
+    rec.retryTimer = setTimeout(() => load(rec, url), rec.retryDelay);
+    rec.retryDelay = Math.min(rec.retryDelay * 2, RETRY_MAX_MS);
+  });
   page.on('did-finish-load', () => {
     const url = page.getURL();
-    if (nav().allowed(url)) { rec.retryDelay = RETRY_MIN_MS; rec.url = url; }
+    if (nav().allowed(url) && !rec.httpError) { rec.retryDelay = RETRY_MIN_MS; rec.url = url; }
+    if (!rec.primary && (rec.secondary || (!wayland() && settings.secondDisplay !== 'none'))) watchForSelkies(rec);
     pushBars();
   });
 
-  win.show();
+  // A second screen opens without taking focus from its first window.
+  if (rec.primary) win.showInactive(); else win.show();
   placeWindow(rec).finally(() => applyWindowMode(rec));
   return rec;
 }
@@ -822,6 +990,7 @@ async function overlayState() {
     wm,
     wayland: wayland(),
     displays: await listDisplays(),
+    secondAuto: await secondAutoChoice(),
     items: await refreshCapture(),
   };
 }

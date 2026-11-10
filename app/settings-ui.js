@@ -14,6 +14,7 @@ function formValues() {
   return {
     url: $('url').value.trim(),
     display: $('display').value,
+    secondDisplay: $('secondDisplay').value,
     windowMode: form.elements.windowMode.value,
     captureKeys: $('captureKeys').checked,
   };
@@ -73,7 +74,7 @@ function renderItems(items, manage) {
 }
 
 function render(state) {
-  const { settings, firstRun, urlOverride, wm, wayland, displays, items, locked, integration, kiosk } = state;
+  const { settings, firstRun, urlOverride, wm, wayland, displays, secondAuto, items, locked, integration, kiosk } = state;
 
   $('intro').textContent = kiosk
     ? 'Kiosk mode: changes last until Airlock Browser quits, and nothing is saved.'
@@ -102,6 +103,20 @@ function render(state) {
     ? 'This Wayland compositor does not let apps choose a monitor.'
     : wm === 'kde' ? 'Applied through the KWin window rule below.' : '';
 
+  // A selkies desktop's second monitor. Automatic names what it would pick now.
+  const second = $('secondDisplay');
+  const auto = secondAuto ? `Automatic (now ${secondAuto.name}, ${secondAuto.side} of the first)` : 'Automatic';
+  second.replaceChildren(new Option(auto, 'auto'), new Option('None', 'none'));
+  for (const d of displays) second.append(new Option(`${d.name} · ${d.bounds.width}×${d.bounds.height} at ${d.bounds.x},${d.bounds.y}`, d.name));
+  if (!['auto', 'none'].includes(settings.secondDisplay) && !displays.some((d) => d.name === settings.secondDisplay)) {
+    second.append(new Option(`${settings.secondDisplay} (not connected)`, settings.secondDisplay));
+  }
+  second.value = settings.secondDisplay;
+  second.disabled = wayland;
+  $('second-note').textContent = wayland
+    ? 'Only under X11 for now.'
+    : 'A selkies desktop also fills this monitor. Automatic picks the nearest beside the first, else above or below.';
+
   form.elements.windowMode.value = settings.windowMode;
   $('captureKeys').checked = settings.captureKeys;
 
@@ -111,6 +126,7 @@ function render(state) {
   };
   lock('url', [$('url')]);
   lock('display', [select]);
+  lock('secondDisplay', [second]);
   lock('windowMode', form.querySelectorAll('input[name=windowMode]'));
   lock('captureKeys', [$('captureKeys')]);
   $('locked-note').hidden = !locked.length;

@@ -10,6 +10,8 @@ const APP_NAME = 'airlock-browser';
 const DEFAULTS = Object.freeze({
   url: '', // Empty until the first-run settings page or a config file sets it.
   display: '', // Output name, e.g. DP-2. Empty leaves placement to the window manager.
+  // A selkies desktop's second monitor: 'auto', 'none' or an output name. X11 only.
+  secondDisplay: 'auto',
   windowMode: 'normal',
   captureKeys: true,
   i3Mode: APP_NAME,
@@ -34,6 +36,7 @@ function normalize(input) {
   if (!input || typeof input !== 'object') return s;
   if (typeof input.url === 'string' && !urlError(input.url.trim())) s.url = input.url.trim();
   if (typeof input.display === 'string') s.display = input.display;
+  if (typeof input.secondDisplay === 'string' && input.secondDisplay) s.secondDisplay = input.secondDisplay;
   if (WINDOW_MODES.includes(input.windowMode)) s.windowMode = input.windowMode;
   if (typeof input.captureKeys === 'boolean') s.captureKeys = input.captureKeys;
   // The name goes into the i3 config between double quotes.

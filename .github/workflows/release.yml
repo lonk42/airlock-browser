@@ -2,6 +2,8 @@ name: Release
 
 # A version tag such as 1.0.0 builds the AppImage and the RPM and publishes
 # them as that tag's GitHub release. The tag must match package.json.
+# A tag with a pre-release part, such as 0.2.0-beta.1, is published as a
+# pre-release, which GitHub never marks as the latest release.
 on:
   push:
     tags: ['[0-9]+.[0-9]+.[0-9]+*']
@@ -37,8 +39,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          prerelease=()
+          case "$GITHUB_REF_NAME" in *-*) prerelease=(--prerelease) ;; esac
           gh release create "$GITHUB_REF_NAME" \
             --verify-tag \
+            "${prerelease[@]}" \
             --title "Airlock Browser $GITHUB_REF_NAME" \
             --generate-notes \
             dist/*.AppImage dist/*.rpm dist/SHA256SUMS

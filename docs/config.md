@@ -30,6 +30,7 @@ settings:
 | `title` | `Airlock Browser` | | Window title until the page sets its own, and the title of status pages. |
 | `settings.url` | | | Address to open. Required in kiosk mode, with `settingsPage: false`, or when `url` is locked. |
 | `settings.display` | | | Output name, such as `DP-2`. |
+| `settings.secondDisplay` | `auto` | | A selkies desktop's [second monitor](design.md#second-monitor): `auto`, `none` or an output name. X11 only. |
 | `settings.windowMode` | | | `normal`, `maximized` or `fullscreen`. |
 | `settings.captureKeys` | | | `true` or `false`. |
 | `toolbar.fullscreen` | `true` | | In kiosk mode, the bar's **Full screen** and **Leave full screen** switch a window between full screen and the toolbar for the run, even with `windowMode` locked. |

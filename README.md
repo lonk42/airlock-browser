@@ -21,12 +21,16 @@ Typical uses:
 - **Monitor and window size.**
   Window, maximised or full screen, on a chosen monitor.
   [Detail](docs/design.md#placement)
+- **Second monitor.**
+  Under X11, a selkies desktop extends onto a second monitor, chosen automatically or in the settings.
+  [Detail](docs/design.md#second-monitor)
 - **Certificate pinning.**
   A self-signed certificate is trusted for the session on first connection.
   A config file can add a private CA.
   [Detail](docs/design.md#tls)
 - **Reconnect.**
   An unreachable page shows a status page and retries, from 1s up to every 30s.
+  A desktop that answers with an HTTP error, such as Coder's `404 - Application Not Found` while a workspace restarts, is retried the same way.
 - **Window bar.**
   Full-screen windows have a drop-down bar with the window actions.
   In kiosk mode, other windows have it as a toolbar, with a certificate status chip.

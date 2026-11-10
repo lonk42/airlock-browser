@@ -51,13 +51,46 @@ Wayland clients cannot choose their own position, so the monitor choice goes thr
 
 | Session | Monitor names from | Applied by |
 |---|---|---|
-| KDE (Wayland or X11) | Electron `screen`, whose labels are output names such as `DP-2` under Wayland | KWin rule position |
-| i3 | `i3-msg -t get_outputs` | `i3-msg move container to output` after the window maps |
-| Other X11 | Electron `screen` | `BrowserWindow.setBounds` |
+| KDE Wayland | Electron `screen`, whose labels are output names such as `DP-2` | KWin rule position |
+| KDE X11 | `xrandr --listmonitors` | KWin rule position |
+| i3 | `i3-msg -t get_outputs` | `i3-msg [id=…] move container to output` |
+| Other X11 | `xrandr --listmonitors` | `BrowserWindow.setBounds` |
 | Other Wayland | | Not possible |
 
+Under X11 Electron's `screen` gives no output names; it is the fallback when `xrandr` lists nothing.
+The window manager places a new window itself when it maps it, after `show()` returns, so `i3-msg` and `setBounds` are repeated until the window is on the monitor.
+i3 matches the window by its X11 id, since every window has the same class.
 Window, maximised or fullscreen is applied by the app after placement, so fullscreen fills the monitor the window opened on.
 A chosen monitor that is not connected keeps the position already in the KWin rule.
+
+## Second monitor
+
+Selkies extends its desktop across a second page: the same address with the fragment `#display2-<side>`, where the side is `right`, `left`, `up` or `down` of the first page's monitor.
+Each page sends its window size, and the server adds a monitor to the remote desktop for the second one.
+Selkies has one second display at most, and plays sound on the first page only.
+
+Under X11, once a desktop window's page has loaded and defines `window.selkiesCoreInitialize`, the app opens a second window on the second monitor with that address, in the same window mode.
+The page is checked every 500 ms for 15 s after each load, since selkies loads its core after the page.
+
+`settings.secondDisplay` picks the monitor:
+
+- `auto`: the nearest monitor beside the first window's, by centre, or else the nearest above or below.
+- An output name: that monitor, if connected and not the first window's.
+- `none`: no second window.
+
+The side is the direction from the first monitor's centre to the second's, horizontal on a tie.
+The first window's monitor is `settings.display`, or the one that holds most of the window.
+
+The two windows are one desktop:
+
+- The second window opens without focus, comes to the front with the first, and closes with it.
+- The Windows list shows the pair once; the second window's bar shows its title with "· second screen".
+- Closing the second window keeps it closed for the run, through reloads.
+- When the first page loads selkies again (a reload, or a retry after a workspace restart), the second page is reloaded too. Selkies' second page does not rejoin a restarted server by itself, and keeps its last frame on screen.
+- The second page's address is the first page's address at the time, not the window's home, so it uses the host name Coder redirected to.
+- Selkies' own second-screen button calls `window.open` with a `#display2` address of the window's own origin. That opens the second window, on the monitor `auto` would pick, even with `secondDisplay: none`. Its side comes from the monitors, not from the page.
+
+Under Wayland the second window opens only from selkies' button, wherever the compositor puts it.
 
 ## TLS
 
@@ -92,6 +125,8 @@ A login provider's popup (MSAL's `loginPopup`) stays a child window with the ope
 The launcher window loads the address.
 A page that opens a desktop origin other than the launcher's own, by `window.open` or by a link, gets a window for that origin, or brings the existing one to the front.
 Each window has a home origin, and navigation to it stays in the window.
+A desktop window also owns the first desktop origin its page lands on: Coder redirects `desktop--main--ws--user.coder.example.lan` to `desktop--ws--user.coder.example.lan` for a workspace with one agent, and selkies later navigates to its own address when it reconnects.
+Without that, the reconnect opened a second window for the same desktop.
 Coder signs in to a workspace app by redirecting from the app to the dashboard and back, so routing by the origin of the current page would open a second window during the login.
 An allowed page that is neither the window's home nor a desktop opens in the launcher.
 
@@ -99,6 +134,8 @@ Closing the launcher while a desktop window is open hides it.
 Closing the last desktop window shows it again, and closing the launcher alone quits.
 The escape keys act on the window they are pressed in, and a second launch brings the last focused window to the front.
 Retry state is per window: a desktop window retries its own address.
+A desktop page that answers with an HTTP status of 400 or more is retried with the same backoff, with the server's page shown meanwhile.
+Selkies reloads its page when the server goes away, so during a Coder workspace restart it lands on Coder's `404 - Application Not Found`, which would otherwise stay.
 `launcher.windowMode` gives the launcher its own window mode, so a login page can be a normal window while desktops are full screen.
 
 ## Bar
