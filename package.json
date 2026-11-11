@@ -1,7 +1,7 @@
 {
   "name": "airlock-browser",
   "productName": "Airlock Browser",
-  "version": "0.2.0-beta.1",
+  "version": "0.2.1",
   "description": "Locked-down browser window for one site or remote desktop, with kiosk mode and window-manager key passthrough",
   "homepage": "https://github.com/lonk42/airlock-browser",
   "repository": {
@@ -53,9 +53,12 @@
     },
     "rpm": {
       "packageName": "airlock-browser",
+      "afterRemove": "build/rpm-after-remove.sh",
       "fpm": [
         "--rpm-rpmbuild-define",
-        "_build_id_links none"
+        "_build_id_links none",
+        "--rpm-posttrans",
+        "build/rpm-posttrans.sh"
       ]
     },
     "publish": null

@@ -211,6 +211,8 @@ The cost is about 125 MB per copy, and Chromium security updates arrive only wit
 
 The RPM is electron-builder's `rpm` target, which runs fpm and needs `rpmbuild`.
 It is built with `_build_id_links none`: otherwise it owns `/usr/lib/.build-id` links that clash with any other Electron app installed from an RPM.
+electron-builder's own remove script deletes the `/usr/bin/airlock-browser` link on every run, and on an upgrade the old package's remove script runs after the new one's install script, so the link was lost.
+`build/rpm-after-remove.sh` is that script with a guard that skips it unless the package is really being erased; `build/rpm-posttrans.sh` re-creates the link at the end of the transaction, for upgrades from 0.2.0-beta.1 and earlier, whose remove scripts have no guard.
 `publish` is off, so neither package carries electron-updater metadata; there is no auto-update.
 
 `.github/workflows/release.yml` builds both on a version tag such as `1.0.0`, after checking the tag matches `package.json` and running the tests, and publishes them with `SHA256SUMS` as the tag's release.
