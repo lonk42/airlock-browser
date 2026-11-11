@@ -445,7 +445,9 @@ function securityOf(rec) {
 
 function barState(rec) {
   const { win } = rec;
-  const homeIsDesktop = nav().desktop(rec.home);
+  // A desktop's own page has no Home or Back unless toolbar.navigation asks,
+  // such as a meeting site that needs the desktop permissions.
+  const homeNav = rec.launcher && (!nav().desktop(rec.home) || policy.toolbar.navigation);
   const fullscreenLocked = policy.lock.includes('windowMode');
   return {
     toolbar: toolbarShown(rec),
@@ -455,9 +457,9 @@ function barState(rec) {
     // From a desktop window, the launcher; in the launcher, its own address.
     home: !rec.launcher && launcher
       ? { label: policy.title, hint: `Show ${launcher.win.getTitle()}`, leaves: true }
-      : rec.launcher && !homeIsDesktop ? { label: 'Home', hint: rec.home } : null,
+      : homeNav ? { label: 'Home', hint: rec.home } : null,
     // null: no Back here; false: nothing to go back to (the toolbar greys it out).
-    back: rec.launcher && !homeIsDesktop ? rec.page.navigationHistory.canGoBack() : null,
+    back: homeNav ? rec.page.navigationHistory.canGoBack() : null,
     windows: [...windows].filter((r) => !r.primary && (r.win.isVisible() || r === launcher)).map((r) => ({
       id: r.id, title: r.win.getTitle(), url: r.url || r.home, current: r === rec || r === rec.primary,
     })),

@@ -109,11 +109,14 @@ test('the launcher can have its own window mode', () => {
   fails('version: 1\nlauncher:\n  mode: normal\n', /launcher.mode: unknown key/);
 });
 
-test('the toolbar security chip and full-screen switch can be turned off', () => {
+test('the toolbar security chip and full-screen switch can be turned off, Home and Back on', () => {
   assert.equal(parse('version: 1\n').toolbar.security, true);
   assert.equal(parse('version: 1\ntoolbar:\n  security: false\n').toolbar.security, false);
   assert.equal(parse('version: 1\n').toolbar.fullscreen, true);
   assert.equal(parse('version: 1\ntoolbar:\n  fullscreen: false\n').toolbar.fullscreen, false);
+  assert.equal(parse('version: 1\n').toolbar.navigation, false);
+  assert.equal(parse('version: 1\ntoolbar:\n  navigation: true\n').toolbar.navigation, true);
+  fails('version: 1\ntoolbar:\n  navigation: yes please\n', /toolbar.navigation/);
   fails('version: 1\ntoolbar:\n  security: maybe\n', /toolbar.security/);
   fails('version: 1\ntoolbar:\n  chip: false\n', /toolbar.chip: unknown key/);
 });

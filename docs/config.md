@@ -34,6 +34,7 @@ settings:
 | `settings.windowMode` | | | `normal`, `maximized` or `fullscreen`. |
 | `settings.captureKeys` | | | `true` or `false`. |
 | `toolbar.fullscreen` | `true` | | In kiosk mode, the bar's **Full screen** and **Leave full screen** switch a window between full screen and the toolbar for the run, even with `windowMode` locked. |
+| `toolbar.navigation` | `false` | | **Home** and **Back** on the bar when the address is a desktop origin, which has neither otherwise. For a site such as a video meeting that needs the desktop permissions. |
 | `toolbar.security` | `true` | | The kiosk toolbar's security chip: green when the certificate is trusted, amber for http, `tls.insecure` or a changed pinned certificate. |
 | `launcher.windowMode` | `settings.windowMode` | | The [launcher](#windows)'s own `normal`, `maximized` or `fullscreen`, such as a normal window for the login with full-screen desktops. |
 | `lock` | none | `all` | Settings the user cannot change: a list of the names above, `all` or `none`. |

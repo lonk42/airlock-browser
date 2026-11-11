@@ -89,7 +89,7 @@ function defaults(kiosk) {
     downloads: null, // null: Electron's own (a save dialog); kiosk: none
     media: { screenPicker: false, hardwareVideo: false },
     launcher: { windowMode: null }, // null: settings.windowMode
-    toolbar: { security: true, fullscreen: true }, // the kiosk toolbar's security chip and full-screen switch
+    toolbar: { security: true, fullscreen: true, navigation: false }, // the kiosk toolbar's security chip, full-screen switch, and Home and Back on a desktop
     navigation: {
       allow: [],
       auth: [],
@@ -220,8 +220,8 @@ function parse(text, file = null, base = file ? path.dirname(file) : process.cwd
   }
 
   if (doc.toolbar !== undefined) {
-    const t = map(doc.toolbar, ['toolbar'], ['security', 'fullscreen']);
-    for (const k of ['security', 'fullscreen']) if (t[k] !== undefined) p.toolbar[k] = bool(t[k], ['toolbar', k]);
+    const t = map(doc.toolbar, ['toolbar'], ['security', 'fullscreen', 'navigation']);
+    for (const k of ['security', 'fullscreen', 'navigation']) if (t[k] !== undefined) p.toolbar[k] = bool(t[k], ['toolbar', k]);
   }
 
   if (doc.navigation !== undefined) {
