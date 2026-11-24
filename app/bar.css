@@ -118,6 +118,50 @@ button.quit:hover { background: var(--bad); color: #fff; }
 #menu button { width: 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; max-width: 420px; display: block; }
 #menu button[aria-current=true] { color: var(--strong); box-shadow: inset 2px 0 0 var(--accent); }
 
+/* The keypad: a phone's round keys with their letters, under a readout. */
+#pad {
+  margin: 6px 0 0;
+  padding: 10px;
+  width: 220px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+}
+#pad[hidden] { display: none; }
+#pad-readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+#pad-digits { font: 600 20px/1 "Noto Sans Mono", "DejaVu Sans Mono", monospace; letter-spacing: 2px; color: var(--strong); overflow: hidden; white-space: nowrap; }
+#pad-status { font-size: 11px; color: var(--muted); flex: none; }
+#pad-status[data-level=ok] { color: var(--ok); }
+#pad-status[data-level=warn] { color: var(--warn); }
+#pad-keys { display: grid; grid-template-columns: repeat(3, 52px); gap: 8px; justify-content: center; }
+#pad #pad-keys button {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--raised);
+  color: var(--strong);
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+#pad #pad-keys button small { font-size: 8px; letter-spacing: 1px; color: var(--muted); height: 9px; }
+#pad #pad-keys button:hover { background: #3d434a; }
+#pad #pad-keys button:active, #pad #pad-keys button.pressed { background: #474e56; box-shadow: 0 0 0 2px var(--accent); }
+
 /* --- Kiosk toolbar ------------------------------------------------------------ */
 #root.toolbar { display: flex; width: 100vw; align-items: stretch; }
 #root.toolbar #handle, #root.toolbar .pin, #root.toolbar .label, #root.toolbar .sep, #root.toolbar #who .mark { display: none; }
@@ -141,7 +185,7 @@ button.quit:hover { background: var(--bad); color: #fff; }
 #root.toolbar #who { order: 4; flex: 1; justify-content: center; min-width: 0; margin: 0 12px; font-weight: 400; color: var(--muted); }
 #root.toolbar #title { max-width: none; }
 #root.toolbar #security { order: 5; }
-#root.toolbar [data-act=windows] { order: 6; }
+#root.toolbar [data-act=windows], #root.toolbar [data-act=keypad] { order: 6; }
 #root.toolbar [data-act=settings] { order: 7; }
 #root.toolbar [data-act=fullscreen] { order: 8; }
 #root.toolbar [data-act=maximize] { order: 9; }
@@ -174,5 +218,5 @@ button.quit:hover { background: var(--bad); color: #fff; }
 #root.toolbar #panel:not(.has-close) .quit-power { display: none; }
 #root.toolbar #panel:not(.has-close) .quit-x { display: block; }
 
-#root.toolbar #menu { align-self: flex-end; margin: 4px 8px 12px 0; }
+#root.toolbar #menu, #root.toolbar #pad { align-self: flex-end; margin: 4px 8px 12px 0; }
 #root.toolbar #menu button { width: 100%; height: auto; padding: 7px 11px; border-radius: 7px; display: block; -webkit-app-region: no-drag; }

@@ -47,6 +47,9 @@ Typical uses:
 - **Screen sharing.**
   A screen and window picker for pages that share a screen.
   [Detail](docs/config.md#screen-sharing)
+- **Keypad.**
+  A phone keypad on the bar that sends DTMF tones into a web call, such as a Cisco Meeting Server meeting dialled out to an IVR.
+  [Detail](docs/config.md#keypad)
 
 ## Install
 
@@ -123,6 +126,7 @@ npm run build    # dist/airlock-browser-<version>-x86_64.AppImage and .rpm (need
 
 - Test `media.hardwareVideo` on a machine with VA-API
 - Test the screen picker under X11 with real sources
+- Test the keypad against a real Cisco Meeting Server call
 
 ## Documentation
 

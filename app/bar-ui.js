@@ -9,6 +9,7 @@ const bar = window.airlockBrowserBar;
 const root = $('root');
 const panel = $('panel');
 const menu = $('menu');
+const pad = $('pad');
 const button = (act) => panel.querySelector(`[data-act="${act}"]`);
 
 const CLOSE_DELAY_MS = 700;
@@ -56,6 +57,8 @@ function render() {
   back.hidden = toolbar() ? state.back === null : !state.back;
   back.disabled = !state.back;
   button('windows').hidden = state.windows.length < 2;
+  button('keypad').hidden = !state.keypad;
+  if (!state.keypad && !pad.hidden) closePad();
   button('reload').hidden = !state.reload;
   const fs = button('fullscreen');
   fs.hidden = !state.fullscreen;
@@ -118,6 +121,7 @@ function renderMenu() {
 }
 
 function openMenu() {
+  closePad();
   renderMenu();
   menu.hidden = false;
   button('windows').setAttribute('aria-expanded', 'true');
@@ -148,11 +152,55 @@ async function expand(focus) {
   }
 }
 
+// The keypad: each key sends its tone into the page's call at once (media.dtmf).
+// The readout shows what was sent since the pad opened, and whether a call took it.
+const PAD_KEYS = '0123456789*#';
+const READOUT_MAX = 9; // What fits beside the status; older digits scroll off.
+let sending = Promise.resolve();
+
+function openPad() {
+  closeMenu();
+  $('pad-digits').textContent = '';
+  $('pad-status').textContent = '';
+  pad.hidden = false;
+  button('keypad').setAttribute('aria-expanded', 'true');
+  report();
+  pad.querySelector('[data-key="1"]').focus();
+}
+
+function closePad() {
+  pad.hidden = true;
+  button('keypad').setAttribute('aria-expanded', 'false');
+  report();
+}
+
+function press(key) {
+  const b = pad.querySelector(`[data-key="${CSS.escape(key)}"]`);
+  b.classList.add('pressed');
+  setTimeout(() => b.classList.remove('pressed'), 160);
+  const digits = $('pad-digits');
+  digits.textContent = (digits.textContent + key).slice(-READOUT_MAX);
+  const status = $('pad-status');
+  status.textContent = 'Sending';
+  status.dataset.level = '';
+  // One at a time, so the tones keep their order.
+  sending = sending.then(() => bar.dtmf(key)).then((reached) => {
+    status.textContent = reached ? 'Sent' : 'No call';
+    status.dataset.level = reached ? 'ok' : 'warn';
+  }, () => { status.textContent = 'No call'; status.dataset.level = 'warn'; });
+}
+
+pad.addEventListener('click', (event) => {
+  const b = event.target.closest('button[data-key]');
+  if (b) press(b.dataset.key);
+});
+
 // giveBack returns keyboard focus to the page under the bar.
 function collapse(giveBack) {
   clearTimeout(closeTimer);
   if (toolbar()) {
     closeMenu();
+    closePad();
     report();
     if (giveBack) bar.act('focus-page');
     return;
@@ -160,6 +208,7 @@ function collapse(giveBack) {
   if (!open) return;
   open = false;
   closeMenu();
+  closePad();
   panel.hidden = true;
   root.classList.replace('open', 'closed');
   $('handle').setAttribute('aria-expanded', 'false');
@@ -180,8 +229,14 @@ window.addEventListener('blur', () => { if (open && !pinned) collapse(false); })
 bar.state().then((s) => { if (s && s.toolbar) { state = s; render(); } });
 
 document.addEventListener('keydown', (event) => {
+  // Typing digits dials while the pad is open; Enter and Space still press the focused key.
+  if (!pad.hidden && PAD_KEYS.includes(event.key) && !event.ctrlKey && !event.altKey && !event.metaKey) {
+    event.preventDefault();
+    if (!event.repeat) press(event.key);
+    return;
+  }
   if (event.key !== 'Escape') return;
-  if (!menu.hidden) { closeMenu(); button('windows').focus(); } else collapse(true);
+  if (!menu.hidden) { closeMenu(); button('windows').focus(); } else if (!pad.hidden) { closePad(); button('keypad').focus(); } else collapse(true);
 });
 
 panel.addEventListener('click', (event) => {
@@ -195,6 +250,10 @@ panel.addEventListener('click', (event) => {
   }
   if (act === 'windows') {
     if (menu.hidden) openMenu(); else closeMenu();
+    return;
+  }
+  if (act === 'keypad') {
+    if (pad.hidden) openPad(); else closePad();
     return;
   }
   bar.act(act);

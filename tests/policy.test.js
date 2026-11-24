@@ -241,6 +241,9 @@ test('downloads: mistakes are errors', () => {
   fails('version: 1\ndownloads: {quit: handler}', /no handler runs a program/);
   fails('version: 1\ndownloads: {quit: always}', /downloads.quit: must be one of/);
   fails('version: 1\nmedia: {screenpicker: true}', /media.screenpicker: unknown key/);
+  fails('version: 1\nmedia: {dtmf: true}', /media.dtmf: must be one of none, voice, rfc4733/);
+  assert.equal(parse('version: 1\n').media.dtmf, 'none');
+  assert.equal(parse('version: 1\nmedia: {dtmf: voice}').media.dtmf, 'voice');
   assert.equal(parse('version: 1\ndownloads: {dir: ~/Downloads}').downloads.dir, path.join(os.homedir(), 'Downloads'));
 });
 

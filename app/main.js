@@ -474,7 +474,38 @@ function barState(rec) {
     maximize: toolbarShown(rec) ? (win.isMaximized() ? 'restore' : 'maximize') : null,
     close: !rec.launcher,
     quit: policy.keys.quit,
+    keypad: policy.media.dtmf !== 'none' && !rec.primary,
   };
+}
+
+// --- Keypad ------------------------------------------------------------------
+// The bar's keypad sends DTMF into the page's calls through page-preload.js.
+// Each frame's preload says hello when it loads, and the keys go to every
+// frame that did; each answers with the number of calls it reached.
+
+let dtmfIds = 0;
+const dtmfWaits = new Map(); // id -> { page, done }
+const dtmfFrames = new WeakMap(); // page -> Map(frameToken -> frame)
+
+function sendToFrame(page, frame, digits) {
+  dtmfIds += 1;
+  const id = dtmfIds;
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => { dtmfWaits.delete(id); resolve(0); }, 3000);
+    const done = (n) => { clearTimeout(timer); dtmfWaits.delete(id); resolve(n); };
+    dtmfWaits.set(id, { page, done });
+    try { frame.send('page:dtmf', id, digits, policy.media.dtmf); } catch { done(0); }
+  });
+}
+
+async function sendDtmf(rec, digits) {
+  const { page } = rec;
+  digits = String(digits).toUpperCase().replace(/[^0-9*#A-D]/g, '').slice(0, 32);
+  const known = dtmfFrames.get(page);
+  if (policy.media.dtmf === 'none' || !digits || page.isDestroyed() || !known) return 0;
+  for (const [token, frame] of known) if (frame.isDestroyed() || frame.detached) known.delete(token);
+  const reached = await Promise.all([...known.values()].map((frame) => sendToFrame(page, frame, digits)));
+  return reached.reduce((a, b) => a + b, 0);
 }
 
 function pushBars() {
@@ -693,6 +724,18 @@ function applyWindowMode(rec) {
 
 // A second screen (opts.primary) takes its first window's mode, starts on its
 // own monitor (opts.display) and is placed there again once shown.
+// A site page's preferences. The keypad's preload goes only where it is used,
+// and into iframes too, since a meeting site may hold its call in one. The
+// preload is sandboxed whatever nodeIntegrationInSubFrames says.
+function pagePreferences() {
+  const keypad = policy.media.dtmf !== 'none';
+  return {
+    backgroundThrottling: false,
+    spellcheck: false,
+    ...(keypad ? { preload: path.join(__dirname, 'page-preload.js'), nodeIntegrationInSubFrames: true } : {}),
+  };
+}
+
 function createWindow(home, isLauncher, opts = {}) {
   const toolbar = toolbarFor();
   const frame = !toolbar && windowModeOf(isLauncher || !!(opts.primary && opts.primary.launcher)) === 'normal' && wm !== 'i3';
@@ -707,14 +750,14 @@ function createWindow(home, isLauncher, opts = {}) {
     backgroundColor: '#000000',
     autoHideMenuBar: true,
     show: false,
-    webPreferences: { backgroundThrottling: false, spellcheck: false },
+    webPreferences: toolbar ? { backgroundThrottling: false, spellcheck: false } : pagePreferences(),
   });
   win.setMenuBarVisibility(false);
   // A toolbar window's page is a view below the toolbar; the window's own
   // contents stay blank underneath. Other windows' page is the window's own.
   let pageView = null;
   if (toolbar) {
-    pageView = new WebContentsView({ webPreferences: { backgroundThrottling: false, spellcheck: false } });
+    pageView = new WebContentsView({ webPreferences: pagePreferences() });
     pageView.setBackgroundColor('#000000');
     win.contentView.addChildView(pageView);
     // A page without a <title> fires no title event; Chromium then uses its address.
@@ -1049,6 +1092,17 @@ function registerIpc() {
   const fromBar = (event) => [...windows].find((r) => r.bar && event.sender === r.bar.webContents) || null;
   ipcMain.handle('bar:state', (event) => { const r = fromBar(event); return r ? barState(r) : null; });
   ipcMain.on('bar:act', (event, action, arg) => { const r = fromBar(event); if (r) barAct(r, action, arg); });
+  ipcMain.handle('bar:dtmf', (event, digits) => { const r = fromBar(event); return r && !r.primary ? sendDtmf(r, digits) : 0; });
+  ipcMain.on('page:dtmf-hello', (event) => {
+    const frame = event.senderFrame;
+    if (!frame || ![...windows].some((r) => r.page === event.sender)) return;
+    if (!dtmfFrames.has(event.sender)) dtmfFrames.set(event.sender, new Map());
+    dtmfFrames.get(event.sender).set(frame.frameToken, frame);
+  });
+  ipcMain.on('page:dtmf-sent', (event, id, reached) => {
+    const wait = dtmfWaits.get(id);
+    if (wait && event.sender === wait.page) wait.done(Number.isInteger(reached) ? reached : 0);
+  });
   ipcMain.on('bar:size', (event, width, height) => {
     const r = fromBar(event);
     if (!r || !Number.isFinite(width) || !Number.isFinite(height)) return;

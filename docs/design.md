@@ -151,7 +151,7 @@ In kiosk mode every window is created without decorations, and when it is not fu
 A `BrowserWindow`'s own page always fills the window, so in a kiosk window the site is a separate `WebContentsView` (`rec.page`), below the toolbar or filling the window in full screen, and the window's own page stays blank.
 That is what lets the bar switch a window between full screen and the toolbar.
 A page's own full screen fills the window too, and leaving it restores the window only if the page was what made it full screen, so selkies leaving its full screen does not drop a full-screen kiosk window.
-The toolbar's view grows over the site only while its Windows menu is open.
+The toolbar's view grows over the site only while its Windows menu or keypad is open.
 Both forms share one look: charcoal surfaces, a blue mark and active underline.
 Open, the drop-down is a floating card that starts with the window's name, so it is clear which desktop it acts on; its separators show only between groups that have a button.
 The toolbar is a 38 px strip with the config's `title` as a brand, **Back** (greyed out without history), **Reload** and **Home**, the page title centred, then the security chip and the window buttons, including **Maximise** since the window has no decorations.
@@ -174,10 +174,27 @@ Download handlers are run with `spawn`, not `execFile`, so a long Citrix session
 They run only for extensions listed in the config.
 
 The screen picker uses `session.setDisplayMediaRequestHandler`, with the picker in its own view over the window.
-Pages get no injected script, and `navigator.mediaDevices.getDisplayMedia` is not replaced.
+It injects no script, and `navigator.mediaDevices.getDisplayMedia` is not replaced.
 Under Wayland, `desktopCapturer.getSources` goes through the desktop portal, which shows its own dialog and returns one source; the app's picker appears only when there is more than one source, which means X11.
 
 Chromium no longer supports TLS 1.0 or 1.1, and no setting brings them back; `tls.insecure` covers certificate errors only.
+
+## Keypad
+
+With `media.dtmf` set, site pages get `page-preload.js`, and only then, in every frame (`nodeIntegrationInSubFrames`, which gives a sandboxed preload no Node), since a meeting site may hold its call in an iframe.
+It runs a hook in the page's world before the page's scripts with `contextBridge.executeInMainWorld`, which wraps `addTrack`, `addTransceiver`, `setLocalDescription` and `setRemoteDescription` on `RTCPeerConnection.prototype` to record each connection.
+The hook returns its send function to the preload, so the page has no global to find.
+Each frame's preload says hello when it loads (`page:dtmf-hello`), and the main process keeps those frames by `frameToken`, so a frame never gets a key twice.
+The bar sends a key through the main process to each of them (`page:dtmf`), and they answer with the number of calls they reached.
+
+The audio senders are those of transceivers that send and receive audio, with or without a track, since a page may mute with `replaceTrack(null)`.
+In `voice` mode each sender's track is replaced with a Web Audio mix of that track and the tones, and put back two seconds after the last tone, unless the page replaced it meanwhile.
+The mix comes after Chromium's echo cancellation and noise suppression, which act on the microphone track, so they do not touch the tones.
+Tones are 160 ms with 100 ms gaps, each frequency at about −12 dBFS.
+`rfc4733` appends to `RTCDTMFSender.toneBuffer`, and reaches only senders whose call negotiated telephone-event (`canInsertDTMF`).
+
+Tested with a page that calls itself: both modes reach the far side through Opus, where a Goertzel detector heard every key.
+The same page in a same-origin iframe and in a cross-site one (a separate process) got the keys too.
 
 ## Kiosk storage
 

@@ -48,6 +48,7 @@ settings:
 | `downloads` | a save dialog | none saved | See [Downloads](#downloads). |
 | `media.screenPicker` | `false` | | A picker for screen sharing from a desktop origin's `getDisplayMedia`. |
 | `media.hardwareVideo` | `false` | | VA-API video decode and encode. Untested. |
+| `media.dtmf` | `none` | | The bar's [keypad](#keypad): `none`, `voice` or `rfc4733`. |
 | `navigation.allow` | none | | Other origins pages may navigate to. |
 | `navigation.auth` | none | | Login providers: navigable, and their popups open as child windows. |
 | `navigation.desktops` | the origin of `url` | | Origins that get pointer lock, keyboard lock, clipboard and the other desktop permissions. |
@@ -116,6 +117,19 @@ In kiosk mode the file is deleted when its program exits, and the default direct
 `media.screenPicker: true` answers `getDisplayMedia` from a desktop origin.
 Under Wayland the desktop portal asks the user, and its choice is used.
 Under X11 the app shows its own list of screens and windows.
+
+## Keypad
+
+`media.dtmf` adds **Keypad** to the bar: a phone keypad that sends each key's DTMF tone into the page's WebRTC calls as it is pressed.
+Typing digits dials too while it is open.
+The readout says **No call** when the window has no call to send to.
+
+- `voice` mixes the tones into the outgoing audio, so they reach anything that listens for them, such as an IVR behind a dial-out.
+  You hear them too, quietly.
+- `rfc4733` sends them as telephone-event packets, for a server that negotiates them.
+
+Tones go out while the page has the microphone muted.
+[Detail](design.md#keypad)
 
 ## Profiles
 

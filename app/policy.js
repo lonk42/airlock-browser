@@ -87,7 +87,7 @@ function defaults(kiosk) {
     keys: { quit: true, reload: true, settings: !kiosk, bar: true }, // settings follows settingsPage unless set
     bar: 'auto',
     downloads: null, // null: Electron's own (a save dialog); kiosk: none
-    media: { screenPicker: false, hardwareVideo: false },
+    media: { screenPicker: false, hardwareVideo: false, dtmf: 'none' }, // dtmf: the bar's keypad, see page-preload.js
     launcher: { windowMode: null }, // null: settings.windowMode
     toolbar: { security: true, fullscreen: true, navigation: false }, // the kiosk toolbar's security chip, full-screen switch, and Home and Back on a desktop
     navigation: {
@@ -210,8 +210,9 @@ function parse(text, file = null, base = file ? path.dirname(file) : process.cwd
   }
 
   if (doc.media !== undefined) {
-    const m = map(doc.media, ['media'], ['screenPicker', 'hardwareVideo']);
+    const m = map(doc.media, ['media'], ['screenPicker', 'hardwareVideo', 'dtmf']);
     for (const k of ['screenPicker', 'hardwareVideo']) if (m[k] !== undefined) p.media[k] = bool(m[k], ['media', k]);
+    if (m.dtmf !== undefined) p.media.dtmf = oneOf(m.dtmf, ['media', 'dtmf'], ['none', 'voice', 'rfc4733']);
   }
 
   if (doc.launcher !== undefined) {
